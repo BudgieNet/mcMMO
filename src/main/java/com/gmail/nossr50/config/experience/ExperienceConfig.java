@@ -1,11 +1,10 @@
 package com.gmail.nossr50.config.experience;
 
-import com.gmail.nossr50.config.BukkitConfig;
-import com.gmail.nossr50.datatypes.experience.FormulaType;
-import com.gmail.nossr50.datatypes.skills.MaterialType;
-import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
-import com.gmail.nossr50.datatypes.skills.alchemy.PotionStage;
-import com.gmail.nossr50.util.text.StringUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
@@ -13,9 +12,14 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.EntityType;
+import org.bukkit.permissions.Permissible;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.gmail.nossr50.config.BukkitConfig;
+import com.gmail.nossr50.datatypes.experience.FormulaType;
+import com.gmail.nossr50.datatypes.skills.MaterialType;
+import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
+import com.gmail.nossr50.datatypes.skills.alchemy.PotionStage;
+import com.gmail.nossr50.util.text.StringUtils;
 
 public class ExperienceConfig extends BukkitConfig {
     private static ExperienceConfig instance;
@@ -266,10 +270,25 @@ public class ExperienceConfig extends BukkitConfig {
     }
 
     /* Custom XP perk */
-    public double getCustomXpPerkBoost() {
-        return config.getDouble("Experience_Formula.Custom_XP_Perk.Boost", 1.25);
+    public double getCustomXpPerkBoost(String RankName) {
+        return config.getDouble("Experience_Formula.Custom_XP_Perk." + RankName, 1.25);
     }
 
+    public Set<String> getListofCustomPerks() {
+    	return config.getConfigurationSection("Experience_Formula.Custom_XP_Perk").getKeys(false);
+    }
+    
+    public String getRankName(Permissible permissible, PrimarySkillType skill) {
+		for(String RankName : getListofCustomPerks()) {
+			if(permissible.hasPermission("mcmmo.perks.xp.customboost."+RankName+".all") || 
+					permissible.hasPermission("mcmmo.perks.xp.customboost."+ RankName + "."+ skill.toString().toLowerCase(Locale.ENGLISH))) {
+    			return RankName;
+    			}
+			}
+		return null;
+    }
+
+    
     /* Diminished Returns */
     public float getDiminishedReturnsCap() {
         return (float) config.getDouble("Dimished_Returns.Guaranteed_Minimum_Percentage", 0.05D);
