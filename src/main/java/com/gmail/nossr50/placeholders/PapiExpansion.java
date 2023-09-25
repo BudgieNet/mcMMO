@@ -144,12 +144,15 @@ public class PapiExpansion extends PlaceholderExpansion {
 
     public String getSkillXpRate(PrimarySkillType skill, Player player) {
         final McMMOPlayer user = UserManager.getPlayer(player);
+        String RankName;
         if (user == null) return null;
 
         double modifier = 1.0F;
 
-        if (Permissions.customXpBoost(player, skill))
-            modifier = ExperienceConfig.getInstance().getCustomXpPerkBoost();
+        if (Permissions.customXpBoost(player, skill)) {
+            RankName = ExperienceConfig.getInstance().getRankName(player, skill);
+            modifier = ExperienceConfig.getInstance().getCustomXpPerkBoost(RankName);
+        }
         else if (Permissions.quadrupleXp(player, skill))
             modifier = 4;
         else if (Permissions.tripleXp(player, skill))

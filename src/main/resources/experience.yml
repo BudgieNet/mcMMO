@@ -178,8 +178,8 @@ Experience_Formula:
     # XP earned by players with the permission mcmmo.perks.xp.customboost.<rankname>.<skillname> will get multiplied
     # with 1.25 by default, resulting in a 25% XP boost
     Custom_XP_Perk:
-        rank1: 1.25
-        rank2: 2.0
+        Rank1: 8.0
+        Rank2: 7.0
 #
 # Settings for Diminished Returns
 ###
