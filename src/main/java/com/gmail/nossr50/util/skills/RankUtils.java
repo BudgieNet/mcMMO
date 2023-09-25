@@ -48,7 +48,7 @@ public class RankUtils {
             {
                 SkillUnlockNotificationTask skillUnlockNotificationTask = new SkillUnlockNotificationTask(mcMMOPlayer, subSkillType, newLevel);
 
-                skillUnlockNotificationTask.runTaskLater(plugin, (count * 100L));
+                mcMMO.p.getFoliaLib().getImpl().runAtEntityLater(mcMMOPlayer.getPlayer(), skillUnlockNotificationTask, (count * 100L));
 
                 count++;
             }
@@ -104,7 +104,7 @@ public class RankUtils {
     }
 
     /**
-     * Returns whether or not the player has unlocked the first rank in target subskill
+     * Returns whether the player has unlocked the first rank in target subskill
      * @param player the player
      * @param subSkillType the target subskill
      * @return true if the player has at least one rank in the skill
@@ -118,7 +118,7 @@ public class RankUtils {
     }
 
     /**
-     * Returns whether or not the player has unlocked the first rank in target subskill
+     * Returns whether the player has unlocked the first rank in target subskill
      * @param player the player
      * @param abstractSubSkill the target subskill
      * @return true if the player has at least one rank in the skill
@@ -132,7 +132,7 @@ public class RankUtils {
     }
 
     /**
-     * Returns whether or not the player has reached the specified rank in target subskill
+     * Returns whether the player has reached the specified rank in target subskill
      * @param rank the target rank
      * @param player the player
      * @param subSkillType the target subskill
@@ -144,7 +144,7 @@ public class RankUtils {
     }
 
     /**
-     * Returns whether or not the player has reached the specified rank in target subskill
+     * Returns whether the player has reached the specified rank in target subskill
      * @param rank the target rank
      * @param player the player
      * @param abstractSubSkill the target subskill

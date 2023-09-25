@@ -242,10 +242,10 @@ public class EntityListener implements Listener {
 
                 entity.setMetadata(MetadataConstants.METADATA_KEY_TRAVELING_BLOCK, MetadataConstants.MCMMO_METADATA_VALUE);
                 TravelingBlockMetaCleanup metaCleanupTask = new TravelingBlockMetaCleanup(entity, pluginRef);
-                metaCleanupTask.runTaskTimer(pluginRef, 20, 20*60); //6000 ticks is 5 minutes
+                mcMMO.p.getFoliaLib().getImpl().runAtEntityTimer(entity, metaCleanupTask, 20, 20*60); //6000 ticks is 5 minutes
             }
             else if (isTracked) {
-                mcMMO.getPlaceStore().setTrue(block);
+                BlockUtils.setUnnaturalBlock(block);
                 entity.removeMetadata(MetadataConstants.METADATA_KEY_TRAVELING_BLOCK, pluginRef);
             }
         } else if ((block.getType() == Material.REDSTONE_ORE || block.getType().getKey().getKey().equalsIgnoreCase("deepslate_redstone_ore"))) {
@@ -362,40 +362,30 @@ public class EntityListener implements Listener {
 
         //Friendly fire checks
         if (defender instanceof Player defendingPlayer) {
-            Player attackingPlayer;
-
             //If the attacker is a Player or a projectile belonging to a player
-            if(attacker instanceof Projectile || attacker instanceof Player) {
-                if(attacker instanceof Projectile projectile) {
-                    if(((Projectile) attacker).getShooter() instanceof Player) {
-                        attackingPlayer = (Player) projectile.getShooter();
+            if(attacker instanceof Projectile projectile) {
+                if(projectile.getShooter() instanceof Player attackingPlayer && !attackingPlayer.equals(defendingPlayer)) {
+                    //Check for party friendly fire and cancel the event
+                    if (checkParties(event, defendingPlayer, attackingPlayer)) {
+                        return;
+                    }
+                }
 
-                        //Check for party friendly fire and cancel the event
-                        if (checkParties(event, defendingPlayer, attackingPlayer))
-                        {
+                //Deflect checks
+                final McMMOPlayer mcMMOPlayer = UserManager.getPlayer(defendingPlayer);
+                if (mcMMOPlayer != null) {
+                    UnarmedManager unarmedManager = mcMMOPlayer.getUnarmedManager();
+
+                    if (unarmedManager.canDeflect()) {
+                        if (projectile instanceof Arrow && unarmedManager.deflectCheck()) {
+                            event.setCancelled(true);
                             return;
                         }
-
                     }
-
-                    //Deflect checks
-                    final McMMOPlayer mcMMOPlayer = UserManager.getPlayer(defendingPlayer);
-                    if (mcMMOPlayer != null) {
-                        UnarmedManager unarmedManager = mcMMOPlayer.getUnarmedManager();
-
-                        if (unarmedManager.canDeflect()) {
-                            if (projectile instanceof Arrow && unarmedManager.deflectCheck()) {
-                                event.setCancelled(true);
-                                return;
-                            }
-                        }
-                    }
-                } else {
-                    attackingPlayer = (Player) attacker;
-                    //Check for party friendly fire and cancel the event
-                    if (checkParties(event, defendingPlayer, attackingPlayer))
-                        return;
                 }
+            } else if (attacker instanceof Player attackingPlayer){
+                if (checkParties(event, defendingPlayer, attackingPlayer))
+                    return;
             }
         }
 
