@@ -51,6 +51,13 @@ public class WoodcuttingManager extends SkillManager {
             new int[] { 1, -2}, new int[] { 1, -1}, new int[] { 1, 0}, new int[] { 1, 1}, new int[] { 1, 2},
             new int[] { 2, -1}, new int[] { 2, 0}, new int[] { 2, 1},
     };
+    private static final int[][] directionsSimple = {
+            new int[] {-2, 0},
+            new int[] {-1, 0},
+            new int[] { 0, -2}, new int[] { 0, -1},                    new int[] { 0, 1}, new int[] { 0, 2},
+            new int[] { 1, 0},
+            new int[] { 2, 0},
+    };
 
     public WoodcuttingManager(McMMOPlayer mcMMOPlayer) {
         super(mcMMOPlayer, PrimarySkillType.WOODCUTTING);
@@ -155,28 +162,35 @@ public class WoodcuttingManager extends SkillManager {
      */
     private void processTree(BlockState blockState, Set<BlockState> treeFellerBlocks) {
         List<BlockState> futureCenterBlocks = new ArrayList<>();
+        boolean megaSpruce = false;
+        Block block = blockState.getBlock();
+
+        // Check if mega spruce
+        if (blockState.getType() == Material.SPRUCE_LOG) {
+            int logs = 0;
+            if (block.getRelative(BlockFace.NORTH).getType() == Material.SPRUCE_LOG) logs++;
+            if (block.getRelative(BlockFace.SOUTH).getType() == Material.SPRUCE_LOG) logs++;
+            if (block.getRelative(BlockFace.EAST).getType() == Material.SPRUCE_LOG) logs++;
+            if (block.getRelative(BlockFace.WEST).getType() == Material.SPRUCE_LOG) logs++;
+            megaSpruce = (logs >= 2);
+        }
+
+        int[][] useDir = (megaSpruce) ? directionsSimple : directions;
 
         // Check the block up and take different behavior (smaller search) if it's a log
-        if (processTreeFellerTargetBlock(blockState.getBlock().getRelative(BlockFace.UP).getState(), futureCenterBlocks, treeFellerBlocks)) {
-            for (int[] dir : directions) {
-                processTreeFellerTargetBlock(blockState.getBlock().getRelative(dir[0], 0, dir[1]).getState(), futureCenterBlocks, treeFellerBlocks);
-
-                if (treeFellerReachedThreshold) {
-                    return;
-                }
+        if (processTreeFellerTargetBlock(block.getRelative(BlockFace.UP).getState(), futureCenterBlocks, treeFellerBlocks)) {
+            for (int[] dir : useDir) {
+                processTreeFellerTargetBlock(block.getRelative(dir[0], 0, dir[1]).getState(), futureCenterBlocks, treeFellerBlocks);
+                if (treeFellerReachedThreshold) return;
             }
-        }
-        else {
+        } else {
             // Cover DOWN
-            processTreeFellerTargetBlock(blockState.getBlock().getRelative(BlockFace.DOWN).getState(), futureCenterBlocks, treeFellerBlocks);
+            processTreeFellerTargetBlock(block.getRelative(BlockFace.DOWN).getState(), futureCenterBlocks, treeFellerBlocks);
             // Search in a cube
             for (int y = -1; y <= 1; y++) {
-                for (int[] dir : directions) {
-                    processTreeFellerTargetBlock(blockState.getBlock().getRelative(dir[0], y, dir[1]).getState(), futureCenterBlocks, treeFellerBlocks);
-
-                    if (treeFellerReachedThreshold) {
-                        return;
-                    }
+                for (int[] dir : useDir) {
+                    processTreeFellerTargetBlock(block.getRelative(dir[0], y, dir[1]).getState(), futureCenterBlocks, treeFellerBlocks);
+                    if (treeFellerReachedThreshold) return;
                 }
             }
         }
@@ -279,9 +293,9 @@ public class WoodcuttingManager extends SkillManager {
             int beforeXP = xp;
             Block block = blockState.getBlock();
 
-            if (!EventUtils.simulateBlockBreak(block, player, FakeBlockBreakEventType.TREE_FELLER)) {
-                continue;
-            }
+//            if (!EventUtils.simulateBlockBreak(block, player, FakeBlockBreakEventType.TREE_FELLER)) {
+//                continue;
+//            }
 
             /*
              * Handle Drops & XP
