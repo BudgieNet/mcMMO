@@ -299,8 +299,6 @@ public class WoodcuttingManager extends SkillManager {
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
         int expToDrop = 0;
         List<ItemStack> logsToDrop = new ArrayList<>();
-        int debugNormalLogs = 0;
-        int debugBonusLogs = 0;
 
         for (BlockState blockState : treeFellerBlocks) {
             int beforeXP = mcmmoExp;
@@ -322,19 +320,16 @@ public class WoodcuttingManager extends SkillManager {
 
                 //Drop displaced block
                 addLogsToList(logsToDrop, blockDrops);
-                debugNormalLogs++;
 
                 //Bonus Drops / Harvest lumber checks
                 if (checkHarvestLumberActivation(blockState.getType())) {
                     addLogsToList(logsToDrop, blockDrops);
-                    debugBonusLogs++;
                 }
             } else if (BlockUtils.isNonWoodPartOfTree(blockState)) {
                 //Drop displaced non-woodcutting XP blocks
                 if (RankUtils.hasUnlockedSubskill(player, SubSkillType.WOODCUTTING_KNOCK_ON_WOOD)) {
                     // Drop logs
                     addLogsToList(logsToDrop, blockDrops);
-                    debugNormalLogs++;
 
                     if (RankUtils.hasReachedRank(2, player, SubSkillType.WOODCUTTING_KNOCK_ON_WOOD)) {
                         if (mcMMO.p.getAdvancedConfig().isKnockOnWoodXPOrbEnabled()) {
@@ -347,7 +342,6 @@ public class WoodcuttingManager extends SkillManager {
                 } else {
                     // Drop logs
                     addLogsToList(logsToDrop, blockDrops);
-                    debugNormalLogs++;
                 }
             }
 
@@ -358,7 +352,10 @@ public class WoodcuttingManager extends SkillManager {
             //Update only when XP changes
             if (beforeXP != mcmmoExp) processedLogCount++;
         }
-        Misc.spawnItemsFromCollection(getPlayer(), player.getLocation(), logsToDrop, ItemSpawnReason.TREE_FELLER_DISPLACED_BLOCK); // Drop items on player
+        //Misc.spawnItemsFromCollection(getPlayer(), player.getLocation(), logsToDrop, ItemSpawnReason.TREE_FELLER_DISPLACED_BLOCK); // Drop items on player
+        for (ItemStack item:logsToDrop) {
+            getPlayer().getWorld().dropItem(player.getLocation(), item);
+        }
         Misc.spawnExperienceOrb(player.getLocation(), expToDrop);  // Drop XP orb on player
         applyXpGain(mcmmoExp, XPGainReason.PVE, XPGainSource.SELF);  // Apply mcmmo exp to player
     }
