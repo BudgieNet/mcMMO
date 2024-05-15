@@ -253,7 +253,7 @@ public class WoodcuttingManager extends SkillManager {
      *     in treeFellerBlocks.
      */
     private boolean processTreeFellerTargetBlock(@NotNull BlockState blockState, @NotNull List<BlockState> futureCenterBlocks, @NotNull Set<BlockState> treeFellerBlocks) {
-        if (treeFellerBlocks.contains(blockState) || mcMMO.getPlaceStore().isTrue(blockState)) {
+        if (treeFellerBlocks.contains(blockState) /*|| mcMMO.getPlaceStore().isTrue(blockState)*/) {
             return false;
         }
 
@@ -354,7 +354,7 @@ public class WoodcuttingManager extends SkillManager {
         }
         //Misc.spawnItemsFromCollection(getPlayer(), player.getLocation(), logsToDrop, ItemSpawnReason.TREE_FELLER_DISPLACED_BLOCK); // Drop items on player
         for (ItemStack item:logsToDrop) {
-            getPlayer().getWorld().dropItem(player.getLocation(), item);
+            getPlayer().getWorld().dropItemNaturally(player.getLocation(), item);
         }
         Misc.spawnExperienceOrb(player.getLocation(), expToDrop);  // Drop XP orb on player
         applyXpGain(mcmmoExp, XPGainReason.PVE, XPGainSource.SELF);  // Apply mcmmo exp to player
