@@ -61,6 +61,15 @@ public class WoodcuttingManager extends SkillManager {
             new int[] { 1, -2}, new int[] { 1, -1}, new int[] { 1, 0}, new int[] { 1, 1}, new int[] { 1, 2},
             new int[] { 2, -1}, new int[] { 2, 0}, new int[] { 2, 1},
     };
+    // * Added by CodfishBender - Start *
+    private static final int[][] directionsSimple = {
+                                                    new int[] {-2, 0},
+                                new int[] {-1, -1}, new int[] {-1, 0}, new int[] {-1, 1},
+            new int[] { 0, -2}, new int[] { 0, -1},                    new int[] { 0, 1}, new int[] { 0, 2},
+                                new int[] { 1, -1}, new int[] { 1, 0}, new int[] { 1, 1},
+                                                    new int[] { 2, 0},
+    };
+    // * Added by CodfishBender - End *
 
     public WoodcuttingManager(McMMOPlayer mcMMOPlayer) {
         super(mcMMOPlayer, PrimarySkillType.WOODCUTTING);
@@ -190,6 +199,23 @@ public class WoodcuttingManager extends SkillManager {
      */
     private void processTree(BlockState blockState, Set<BlockState> treeFellerBlocks) {
         List<BlockState> futureCenterBlocks = new ArrayList<>();
+
+        // * Added by CodfishBender - Start *
+        boolean megaSpruce = false;
+        Block block = blockState.getBlock();
+
+        // Check if mega spruce
+        if (blockState.getType() == Material.SPRUCE_LOG) {
+            int logs = 0;
+            if (block.getRelative(BlockFace.NORTH).getType() == Material.SPRUCE_LOG) logs++;
+            if (block.getRelative(BlockFace.SOUTH).getType() == Material.SPRUCE_LOG) logs++;
+            if (block.getRelative(BlockFace.EAST).getType() == Material.SPRUCE_LOG) logs++;
+            if (block.getRelative(BlockFace.WEST).getType() == Material.SPRUCE_LOG) logs++;
+            megaSpruce = (logs >= 2);
+        }
+
+        int[][] directions = (megaSpruce) ? directionsSimple : WoodcuttingManager.directions;
+        // * Added by CodfishBender - End *
 
         // Check the block up and take different behavior (smaller search) if it's a log
         if (processTreeFellerTargetBlock(blockState.getBlock().getRelative(BlockFace.UP).getState(), futureCenterBlocks, treeFellerBlocks)) {
