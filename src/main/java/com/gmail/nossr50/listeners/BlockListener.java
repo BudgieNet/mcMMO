@@ -47,8 +47,7 @@ public class BlockListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    public void onBlockDropItemEvent(BlockDropItemEvent event)
-    {
+    public void onBlockDropItemEvent(BlockDropItemEvent event) {
         //Make sure we clean up metadata on these blocks
         if (event.isCancelled()) {
             if (event.getBlock().hasMetadata(MetadataConstants.METADATA_KEY_BONUS_DROPS))
@@ -84,8 +83,7 @@ public class BlockListener implements Listener {
 
         //If there are more than one block in the item list we can't really trust it and will back out of rewarding bonus drops
         if (blockCount <= 1) {
-            for(Item item : event.getItems())
-            {
+            for(Item item : event.getItems()) {
                 ItemStack is = new ItemStack(item.getItemStack());
 
                 if (is.getAmount() <= 0)
@@ -109,7 +107,7 @@ public class BlockListener implements Listener {
                     int bonusCount = bonusDropMeta.asInt();
 
                     for (int i = 0; i < bonusCount; i++) {
-                        Misc.spawnItemNaturally(event.getPlayer(), event.getBlockState().getLocation(), is, ItemSpawnReason.BONUS_DROPS);
+                        ItemUtils.spawnItemNaturally(event.getPlayer(), event.getBlockState().getLocation(), is, ItemSpawnReason.BONUS_DROPS);
                     }
                 }
             }
@@ -186,8 +184,7 @@ public class BlockListener implements Listener {
      * @param event The event to watch
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onEntityBlockFormEvent(EntityBlockFormEvent event)
-    {
+    public void onEntityBlockFormEvent(EntityBlockFormEvent event) {
         /* WORLD BLACKLIST CHECK */
         if (WorldBlacklist.isWorldBlacklisted(event.getBlock().getWorld()))
             return;
@@ -207,8 +204,7 @@ public class BlockListener implements Listener {
      * Does not monitor stuff like a falling block replacing a liquid
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBlockFormEvent(BlockFormEvent event)
-    {
+    public void onBlockFormEvent(BlockFormEvent event) {
         World world = event.getBlock().getWorld();
 
         /* WORLD BLACKLIST CHECK */
@@ -241,7 +237,9 @@ public class BlockListener implements Listener {
 //      if (!Tag.LOGS.isTagged(event.getBlockReplacedState().getType()) || !Tag.LOGS.isTagged(event.getBlockPlaced().getType()))
 
         /* WORLD BLACKLIST CHECK */
-        if (WorldBlacklist.isWorldBlacklisted(block.getWorld())) return;
+        if (WorldBlacklist.isWorldBlacklisted(block.getWorld())) {
+            return;
+        }
 
         if (BlockUtils.isWithinWorldBounds(block)) {
             //NOTE: BlockMultiPlace has its own logic so don't handle anything that would overlap
@@ -253,16 +251,18 @@ public class BlockListener implements Listener {
 
         Player player = event.getPlayer();
 
-        if (!UserManager.hasPlayerDataKey(player)) return;
+        if (!UserManager.hasPlayerDataKey(player)) {
+            return;
+        }
 
         McMMOPlayer mcMMOPlayer = UserManager.getPlayer(player);
 
-        if (mcMMOPlayer == null) return;
+        if (mcMMOPlayer == null)
+            return;
 
         if (blockState.getType() == Repair.anvilMaterial && mcMMO.p.getSkillTools().doesPlayerHaveSkillPermission(player, PrimarySkillType.REPAIR)) {
             mcMMOPlayer.getRepairManager().placedAnvilCheck();
-        }
-        else if (blockState.getType() == Salvage.anvilMaterial && mcMMO.p.getSkillTools().doesPlayerHaveSkillPermission(player, PrimarySkillType.SALVAGE)) {
+        } else if (blockState.getType() == Salvage.anvilMaterial && mcMMO.p.getSkillTools().doesPlayerHaveSkillPermission(player, PrimarySkillType.SALVAGE)) {
             mcMMOPlayer.getSalvageManager().placedAnvilCheck();
         }
     }
@@ -282,10 +282,12 @@ public class BlockListener implements Listener {
             if (BlockUtils.isWithinWorldBounds(block)) {
                 //Updated: 10/5/2021
                 //Note: For some reason Azalea trees trigger this event but no other tree does (as of 10/5/2021) but if this changes in the future we may need to update this
-                if (BlockUtils.isPartOfTree(event.getBlockPlaced())) return;
+                if (BlockUtils.isPartOfTree(event.getBlockPlaced())) {
+                    return;
+                }
 
                 //Track unnatural blocks
-                for (BlockState replacedState : event.getReplacedBlockStates()) {
+                for(BlockState replacedState : event.getReplacedBlockStates()) {
                     BlockUtils.setUnnaturalBlock(replacedState.getBlock());
                 }
             }
@@ -303,7 +305,7 @@ public class BlockListener implements Listener {
 
         // Minecraft is dumb, the events still throw when a plant "grows" higher than the max block height.  Even though no new block is created
         if (BlockUtils.isWithinWorldBounds(block)) {
-            mcMMO.getPlaceStore().setFalse(block);
+            mcMMO.getUserBlockTracker().setEligible(block);
         }
     }
 
@@ -317,10 +319,10 @@ public class BlockListener implements Listener {
         /* WORLD BLACKLIST CHECK */
         Block block = event.getBlock();
 
-        // Return if fake block break
-        if (event instanceof FakeBlockBreakEvent) return;
+        if (event instanceof FakeBlockBreakEvent) {
+            return;
+        }
 
-        // Return if world blacklisted
         if (WorldBlacklist.isWorldBlacklisted(block.getWorld())) {
             BlockUtils.cleanupBlockMetadata(block);
             return;
@@ -337,6 +339,10 @@ public class BlockListener implements Listener {
         BlockState blockState = block.getState();
         Location location = blockState.getLocation();
 
+//        if (!BlockUtils.shouldBeWatched(blockState)) {
+//            return;
+//        }
+
         /* ALCHEMY - Cancel any brew in progress for that BrewingStand */
         if (blockState instanceof BrewingStand && Alchemy.brewingStandMap.containsKey(location)) {
             Alchemy.brewingStandMap.get(location).cancelBrew();
@@ -351,8 +357,10 @@ public class BlockListener implements Listener {
 
         McMMOPlayer mcMMOPlayer = UserManager.getPlayer(player);
 
-        // Return if player profile not loaded
+        //Check if profile is loaded
         if (mcMMOPlayer == null) {
+            /* Remove metadata from placed watched blocks */
+
             BlockUtils.cleanupBlockMetadata(block);
             return;
         }
@@ -386,29 +394,31 @@ public class BlockListener implements Listener {
         else if (BlockUtils.affectedBySuperBreaker(blockState)
                 && (ItemUtils.isPickaxe(heldItem) || ItemUtils.isHoe(heldItem))
                 && mcMMO.p.getSkillTools().doesPlayerHaveSkillPermission(player, PrimarySkillType.MINING)
-                && !mcMMO.getPlaceStore().isTrue(blockState)) {
+                && !mcMMO.getUserBlockTracker().isIneligible(blockState)) {
             MiningManager miningManager = mcMMOPlayer.getMiningManager();
             miningManager.miningBlockCheck(blockState);
         }
 
         /* WOOD CUTTING */
         else if (BlockUtils.hasWoodcuttingXP(blockState) && ItemUtils.isAxe(heldItem)
-                && mcMMO.p.getSkillTools().doesPlayerHaveSkillPermission(player, PrimarySkillType.WOODCUTTING) && !mcMMO.getPlaceStore().isTrue(blockState)) {
+                && mcMMO.p.getSkillTools().doesPlayerHaveSkillPermission(player, PrimarySkillType.WOODCUTTING) && !mcMMO.getUserBlockTracker().isIneligible(blockState)) {
             WoodcuttingManager woodcuttingManager = mcMMOPlayer.getWoodcuttingManager();
             if (woodcuttingManager.canUseTreeFeller(heldItem)) {
                 woodcuttingManager.processTreeFeller(blockState);
-            }
-            else {
+            } else {
                 //Check for XP
                 woodcuttingManager.processWoodcuttingBlockXP(blockState);
 
                 //Check for bonus drops
-                woodcuttingManager.processHarvestLumber(blockState);
+                woodcuttingManager.processBonusDropCheck(blockState);
             }
         }
 
         /* EXCAVATION */
-        else if (BlockUtils.affectedByGigaDrillBreaker(blockState) && ItemUtils.isShovel(heldItem) && mcMMO.p.getSkillTools().doesPlayerHaveSkillPermission(player, PrimarySkillType.EXCAVATION) && !mcMMO.getPlaceStore().isTrue(blockState)) {
+        else if (BlockUtils.affectedByGigaDrillBreaker(blockState)
+                && ItemUtils.isShovel(heldItem)
+                && mcMMO.p.getSkillTools().doesPlayerHaveSkillPermission(player, PrimarySkillType.EXCAVATION)
+                && !mcMMO.getUserBlockTracker().isIneligible(blockState)) {
             ExcavationManager excavationManager = mcMMOPlayer.getExcavationManager();
             excavationManager.excavationBlockCheck(blockState);
 
@@ -428,26 +438,29 @@ public class BlockListener implements Listener {
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreakHigher(BlockBreakEvent event) {
-        if (event instanceof FakeEvent) return;
+        if (event instanceof FakeEvent)
+            return;
 
-        // Return if world blacklisted
-        if (WorldBlacklist.isWorldBlacklisted(event.getBlock().getWorld())) return;
+        /* WORLD BLACKLIST CHECK */
+        if (WorldBlacklist.isWorldBlacklisted(event.getBlock().getWorld()))
+            return;
 
         /* WORLD GUARD MAIN FLAG CHECK */
         if (WorldGuardUtils.isWorldGuardLoaded()) {
-            if (!WorldGuardManager.getInstance().hasMainFlag(event.getPlayer())) return;
+            if (!WorldGuardManager.getInstance().hasMainFlag(event.getPlayer()))
+                return;
         }
 
         Player player = event.getPlayer();
 
-        // Return if no player data
-        if (!UserManager.hasPlayerDataKey(player)) return;
+        if (!UserManager.hasPlayerDataKey(player) || player.getGameMode() == GameMode.CREATIVE) {
+            return;
+        }
 
-        // Return if player in creative
-        if (player.getGameMode() == GameMode.CREATIVE) return;
-
-        // Profile not loaded
-        if (UserManager.getPlayer(player) == null) return;
+        //Profile not loaded
+        if (UserManager.getPlayer(player) == null) {
+            return;
+        }
 
         BlockState blockState = event.getBlock().getState();
         ItemStack heldItem = player.getInventory().getItemInMainHand();
@@ -459,14 +472,23 @@ public class BlockListener implements Listener {
                 if (herbalismManager.processHylianLuck(blockState)) {
                     blockState.update(true);
                     event.setCancelled(true);
-                }
-                else if (blockState.getType() == Material.FLOWER_POT) {
+                } else if (blockState.getType() == Material.FLOWER_POT) {
                     blockState.setType(Material.AIR);
                     blockState.update(true);
                     event.setCancelled(true);
                 }
             }
         }
+        /*else if (!heldItem.containsEnchantment(Enchantment.SILK_TOUCH)) {
+            SmeltingManager smeltingManager = UserManager.getPlayer(player).getSmeltingManager();
+
+            if (smeltingManager.canUseFluxMining(blockState)) {
+                if (smeltingManager.processFluxMining(blockState)) {
+                    blockState.update(true);
+                    event.setCancelled(true);
+                }
+            }
+        }*/
     }
 
     /**
@@ -479,21 +501,29 @@ public class BlockListener implements Listener {
         Player player = event.getPlayer();
         BlockState blockState = event.getBlock().getState();
 
-        // Return if world blacklisted
-        if (WorldBlacklist.isWorldBlacklisted(event.getBlock().getWorld())) return;
+        /* WORLD BLACKLIST CHECK */
+        if (WorldBlacklist.isWorldBlacklisted(event.getBlock().getWorld()))
+            return;
 
         /* WORLD GUARD MAIN FLAG CHECK */
         if (WorldGuardUtils.isWorldGuardLoaded()) {
-            if (!WorldGuardManager.getInstance().hasMainFlag(event.getPlayer())) return;
+            if (!WorldGuardManager.getInstance().hasMainFlag(event.getPlayer()))
+                return;
         }
 
-        if (event instanceof FakeBlockDamageEvent) return;
-        if (!UserManager.hasPlayerDataKey(player)) return;
+        if (event instanceof FakeBlockDamageEvent) {
+            return;
+        }
+        if (!UserManager.hasPlayerDataKey(player)) {
+            return;
+        }
 
         McMMOPlayer mcMMOPlayer = UserManager.getPlayer(player);
 
-        // Profile not loaded
-        if (mcMMOPlayer == null) return;
+        //Profile not loaded
+        if (mcMMOPlayer == null) {
+            return;
+        }
 
         /*
          * ABILITY PREPARATION CHECKS
@@ -505,17 +535,13 @@ public class BlockListener implements Listener {
 
             if (mcMMOPlayer.getToolPreparationMode(ToolType.HOE) && ItemUtils.isHoe(heldItem) && (BlockUtils.affectedByGreenTerra(blockState) || BlockUtils.canMakeMossy(blockState)) && Permissions.greenTerra(player)) {
                 mcMMOPlayer.checkAbilityActivation(PrimarySkillType.HERBALISM);
-            }
-            else if (mcMMOPlayer.getToolPreparationMode(ToolType.AXE) && ItemUtils.isAxe(heldItem) && BlockUtils.hasWoodcuttingXP(blockState) && Permissions.treeFeller(player)) {
+            } else if (mcMMOPlayer.getToolPreparationMode(ToolType.AXE) && ItemUtils.isAxe(heldItem) && BlockUtils.hasWoodcuttingXP(blockState) && Permissions.treeFeller(player)) {
                 mcMMOPlayer.checkAbilityActivation(PrimarySkillType.WOODCUTTING);
-            }
-            else if (mcMMOPlayer.getToolPreparationMode(ToolType.PICKAXE) && ItemUtils.isPickaxe(heldItem) && BlockUtils.affectedBySuperBreaker(blockState) && Permissions.superBreaker(player)) {
+            } else if (mcMMOPlayer.getToolPreparationMode(ToolType.PICKAXE) && ItemUtils.isPickaxe(heldItem) && BlockUtils.affectedBySuperBreaker(blockState) && Permissions.superBreaker(player)) {
                 mcMMOPlayer.checkAbilityActivation(PrimarySkillType.MINING);
-            }
-            else if (mcMMOPlayer.getToolPreparationMode(ToolType.SHOVEL) && ItemUtils.isShovel(heldItem) && BlockUtils.affectedByGigaDrillBreaker(blockState) && Permissions.gigaDrillBreaker(player)) {
+            } else if (mcMMOPlayer.getToolPreparationMode(ToolType.SHOVEL) && ItemUtils.isShovel(heldItem) && BlockUtils.affectedByGigaDrillBreaker(blockState) && Permissions.gigaDrillBreaker(player)) {
                 mcMMOPlayer.checkAbilityActivation(PrimarySkillType.EXCAVATION);
-            }
-            else if (mcMMOPlayer.getToolPreparationMode(ToolType.FISTS) && heldItem.getType() == Material.AIR && (BlockUtils.affectedByGigaDrillBreaker(blockState)
+            } else if (mcMMOPlayer.getToolPreparationMode(ToolType.FISTS) && heldItem.getType() == Material.AIR && (BlockUtils.affectedByGigaDrillBreaker(blockState)
                     || mcMMO.getMaterialMapStore().isGlass(blockState.getType())
                     || blockState.getType() == Material.SNOW
                     || BlockUtils.affectedByBlockCracker(blockState) && Permissions.berserk(player))) {
@@ -557,21 +583,27 @@ public class BlockListener implements Listener {
             return;
 
         /* WORLD GUARD MAIN FLAG CHECK */
-        if (WorldGuardUtils.isWorldGuardLoaded())
-        {
-            if (!WorldGuardManager.getInstance().hasMainFlag(event.getPlayer())) return;
+        if (WorldGuardUtils.isWorldGuardLoaded()) {
+            if (!WorldGuardManager.getInstance().hasMainFlag(event.getPlayer()))
+                return;
         }
 
-        if (event instanceof FakeBlockDamageEvent) return;
+        if (event instanceof FakeBlockDamageEvent) {
+            return;
+        }
 
         Player player = event.getPlayer();
 
-        if (!UserManager.hasPlayerDataKey(player)) return;
+        if (!UserManager.hasPlayerDataKey(player)) {
+            return;
+        }
 
         McMMOPlayer mcMMOPlayer = UserManager.getPlayer(player);
 
         //Profile not loaded
-        if (UserManager.getPlayer(player) == null) return;
+        if (UserManager.getPlayer(player) == null) {
+            return;
+        }
 
         ItemStack heldItem = player.getInventory().getItemInMainHand();
         Block block = event.getBlock();
@@ -586,14 +618,12 @@ public class BlockListener implements Listener {
             if (mcMMOPlayer.getHerbalismManager().processGreenTerraBlockConversion(blockState)) {
                 blockState.update(true);
             }
-        }
-        else if (mcMMOPlayer.getAbilityMode(SuperAbilityType.BERSERK) && (heldItem.getType() == Material.AIR || mcMMO.p.getGeneralConfig().getUnarmedItemsAsUnarmed())) {
+        } else if (mcMMOPlayer.getAbilityMode(SuperAbilityType.BERSERK) && (heldItem.getType() == Material.AIR || mcMMO.p.getGeneralConfig().getUnarmedItemsAsUnarmed())) {
             if (mcMMOPlayer.getUnarmedManager().canUseBlockCracker() && BlockUtils.affectedByBlockCracker(blockState)) {
                 if (EventUtils.simulateBlockBreak(block, player) && mcMMOPlayer.getUnarmedManager().blockCrackerCheck(blockState)) {
                     blockState.update();
                 }
-            }
-            else if (!event.getInstaBreak() && SuperAbilityType.BERSERK.blockCheck(blockState) && EventUtils.simulateBlockBreak(block, player)) {
+            } else if (!event.getInstaBreak() && SuperAbilityType.BERSERK.blockCheck(blockState) && EventUtils.simulateBlockBreak(block, player)) {
                 event.setInstaBreak(true);
 
                 if (blockState.getType().getKey().getKey().contains("glass")) {
@@ -602,8 +632,7 @@ public class BlockListener implements Listener {
                     SoundManager.sendSound(player, block.getLocation(), SoundType.POP);
                 }
             }
-        }
-        else if (mcMMOPlayer.getWoodcuttingManager().canUseLeafBlower(heldItem) && BlockUtils.isNonWoodPartOfTree(blockState) && EventUtils.simulateBlockBreak(block, player)) {
+        } else if (mcMMOPlayer.getWoodcuttingManager().canUseLeafBlower(heldItem) && BlockUtils.isNonWoodPartOfTree(blockState) && EventUtils.simulateBlockBreak(block, player)) {
             event.setInstaBreak(true);
             SoundManager.sendSound(player, block.getLocation(), SoundType.POP);
         }
@@ -615,8 +644,7 @@ public class BlockListener implements Listener {
         McMMOPlayer mcMMOPlayer = UserManager.getPlayer(player);
 
         //Profile not loaded
-        if (UserManager.getPlayer(player) == null)
-        {
+        if (UserManager.getPlayer(player) == null) {
             return;
         }
 
@@ -633,23 +661,19 @@ public class BlockListener implements Listener {
     //TODO: Convert into locale strings
     private void debugStickDump(Player player, BlockState blockState) {
         //Profile not loaded
-        if (UserManager.getPlayer(player) == null)
-        {
+        if (UserManager.getPlayer(player) == null) {
             return;
         }
 
-        if (UserManager.getPlayer(player).isDebugMode())
-        {
-            if (mcMMO.getPlaceStore().isTrue(blockState))
+        if (UserManager.getPlayer(player).isDebugMode()) {
+            if (mcMMO.getUserBlockTracker().isIneligible(blockState))
                 player.sendMessage("[mcMMO DEBUG] This block is not natural and does not reward treasures/XP");
-            else
-            {
+            else {
                 player.sendMessage("[mcMMO DEBUG] This block is considered natural by mcMMO");
                 UserManager.getPlayer(player).getExcavationManager().printExcavationDebug(player, blockState);
             }
 
-            if (WorldGuardUtils.isWorldGuardLoaded())
-            {
+            if (WorldGuardUtils.isWorldGuardLoaded()) {
                 if (WorldGuardManager.getInstance().hasMainFlag(player))
                     player.sendMessage("[mcMMO DEBUG] World Guard main flag is permitted for this player in this region");
                 else
@@ -661,19 +685,16 @@ public class BlockListener implements Listener {
                     player.sendMessage("[mcMMO DEBUG] World Guard xp flag is not permitted for this player in this region");
             }
 
-            if (blockState instanceof Furnace furnace)
-            {
-                if (mcMMO.getSmeltingTracker().isFurnaceOwned(furnace))
-                {
-                    player.sendMessage("[mcMMO DEBUG] This furnace has a registered owner");
-                    OfflinePlayer furnacePlayer = mcMMO.getSmeltingTracker().getFurnaceOwner(furnace);
-                    if (furnacePlayer != null)
-                    {
-                        player.sendMessage("[mcMMO DEBUG] This furnace is owned by player "+furnacePlayer.getName());
+            if (blockState instanceof Furnace || blockState instanceof BrewingStand) {
+                if (ContainerMetadataUtils.isContainerOwned(blockState)) {
+                    player.sendMessage("[mcMMO DEBUG] This container has a registered owner");
+                    final OfflinePlayer furnacePlayer = ContainerMetadataUtils.getContainerOwner(blockState);
+                    if (furnacePlayer != null) {
+                        player.sendMessage("[mcMMO DEBUG] This container is owned by player "+furnacePlayer.getName());
                     }
                 }
                 else
-                    player.sendMessage("[mcMMO DEBUG] This furnace does not have a registered owner");
+                    player.sendMessage("[mcMMO DEBUG] This container does not have a registered owner");
             }
 
             if (ExperienceConfig.getInstance().isExperienceBarsEnabled())
