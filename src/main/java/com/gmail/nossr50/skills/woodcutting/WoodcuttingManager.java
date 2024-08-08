@@ -303,7 +303,9 @@ public class WoodcuttingManager extends SkillManager {
      *     in treeFellerBlocks.
      */
     private boolean processTreeFellerTargetBlock(@NotNull BlockState blockState, @NotNull List<BlockState> futureCenterBlocks, @NotNull Set<BlockState> treeFellerBlocks) {
-        if (treeFellerBlocks.contains(blockState) || mcMMO.getUserBlockTracker().isIneligible(blockState)) {
+        // * Added by CodfishBender - Start *
+        if (treeFellerBlocks.contains(blockState) /*|| mcMMO.getPlaceStore().isTrue(blockState)*/) {
+            // * Added by CodfishBender - End *
             return false;
         }
 
