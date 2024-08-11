@@ -9,6 +9,7 @@ import com.gmail.nossr50.util.player.UserManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.permissions.PermissionAttachmentInfo;
 
 public final class PerksUtils {
     private static final int LUCKY_SKILL_ACTIVATION_CHANCE = 75;
@@ -49,7 +50,18 @@ public final class PerksUtils {
     public static float handleXpPerks(Player player, float xp, PrimarySkillType skill) {
         double modifier = 1.0F;
 
-        if (Permissions.customXpBoost(player, skill)) {
+        /* A REAL custom exp modifier */
+        String allCustom = "mcmmo.perks.xp.customboost.all";
+        String skillCustom = "mcmmo.perks.xp.customboost." + skill.toString().toLowerCase();
+        for (PermissionAttachmentInfo perm : player.getEffectivePermissions()) {
+            if (perm.getPermission().startsWith(allCustom)) {
+                modifier = Double.parseDouble(perm.getPermission().substring(31));
+            } else if (perm.getPermission().startsWith(skillCustom)) {
+                modifier = Double.parseDouble(perm.getPermission().replace(skillCustom + ".", ""));
+            }
+        }
+        if (modifier != 1.0F) { /* prevents other modifiers from applying */ }
+        else if (Permissions.customXpBoost(player, skill)) {
             if (UserManager.getPlayer(player) != null && UserManager.getPlayer(player).isDebugMode()) {
                 player.sendMessage(ChatColor.GOLD + "[DEBUG] " + ChatColor.DARK_GRAY + "XP Perk Multiplier IS CUSTOM! ");
             }
