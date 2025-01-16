@@ -30,10 +30,7 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
@@ -61,6 +58,13 @@ public class WoodcuttingManager extends SkillManager {
             new int[] { 1, -2}, new int[] { 1, -1}, new int[] { 1, 0}, new int[] { 1, 1}, new int[] { 1, 2},
             new int[] { 2, -1}, new int[] { 2, 0}, new int[] { 2, 1},
     };
+    private static final int[][] directionsSimple = { // * TreeFeller Optimization Patch *
+            new int[] {-2, 0},
+            new int[] {-1, -1}, new int[] {-1, 0}, new int[] {-1, 1},
+            new int[] { 0, -2}, new int[] { 0, -1},                    new int[] { 0, 1}, new int[] { 0, 2},
+            new int[] { 1, -1}, new int[] { 1, 0}, new int[] { 1, 1},
+            new int[] { 2, 0},
+    }; // * TreeFeller Optimization Patch *
 
     public WoodcuttingManager(McMMOPlayer mcMMOPlayer) {
         super(mcMMOPlayer, PrimarySkillType.WOODCUTTING);
@@ -194,7 +198,21 @@ public class WoodcuttingManager extends SkillManager {
      * once the JIT has optimized the function (use the ability about 4 times
      * before taking measurements).
      */
-    private void processTree(Block block, Set<Block> treeFellerBlocks) {
+    private void processTree(Block block, Set<Block> treeFellerBlocks) {processTree(block, treeFellerBlocks, null);} // TreeFeller Optimization Patch
+    private void processTree(Block block, Set<Block> treeFellerBlocks, int[][] directions) { // TreeFeller Optimization Patch
+        /* TreeFeller Optimization Patch Start */
+        // Check if mega spruce
+        if (directions == null && block.getType() == Material.SPRUCE_LOG) {
+            int logs = 0;
+            if (block.getRelative(BlockFace.NORTH).getType() == Material.SPRUCE_LOG) logs++;
+            if (block.getRelative(BlockFace.SOUTH).getType() == Material.SPRUCE_LOG) logs++;
+            if (block.getRelative(BlockFace.EAST).getType() == Material.SPRUCE_LOG) logs++;
+            if (block.getRelative(BlockFace.WEST).getType() == Material.SPRUCE_LOG) logs++;
+            boolean megaSpruce = (logs >= 2);
+            directions = (megaSpruce) ? directionsSimple : WoodcuttingManager.directions;
+        }
+        assert directions != null;
+        /* TreeFeller Optimization Patch End */
         List<Block> futureCenterBlocks = new ArrayList<>();
 
         // Check the block up and take different behavior (smaller search) if it's a log
@@ -227,7 +245,7 @@ public class WoodcuttingManager extends SkillManager {
                 return;
             }
 
-            processTree(futureCenterBlock, treeFellerBlocks);
+            processTree(futureCenterBlock, treeFellerBlocks, directions); // * TreeFeller Optimization Patch *
         }
     }
 
@@ -288,7 +306,7 @@ public class WoodcuttingManager extends SkillManager {
     private boolean processTreeFellerTargetBlock(@NotNull Block block,
                                                  @NotNull List<Block> futureCenterBlocks,
                                                  @NotNull Set<Block> treeFellerBlocks) {
-        if (treeFellerBlocks.contains(block) || mcMMO.getUserBlockTracker().isIneligible(block)) {
+        if (treeFellerBlocks.contains(block) /*|| mcMMO.getUserBlockTracker().isIneligible(blockState)*/) { /* Disable check if log is natural or placed */
             return false;
         }
 
@@ -307,6 +325,20 @@ public class WoodcuttingManager extends SkillManager {
         }
         return false;
     }
+    /* TreeFeller Optimization Patch Start */
+    private void addLogsToList(List<ItemStack> logsToDrop, Collection<ItemStack> newLogs) {
+        newLogsLoop:
+        for (ItemStack newLog : newLogs) {
+            for (ItemStack i:logsToDrop) {
+                if (i.getType() == newLog.getType()) {
+                    i.setAmount(i.getAmount() + newLog.getAmount());
+                    break newLogsLoop;
+                }
+            }
+            logsToDrop.add(newLog);
+        }
+    }
+    /* TreeFeller Optimization Patch End */
 
     /**
      * Handles the dropping of blocks
@@ -318,9 +350,15 @@ public class WoodcuttingManager extends SkillManager {
         int xp = 0;
         int processedLogCount = 0;
         ItemStack itemStack = player.getInventory().getItemInMainHand();
+        /* TreeFeller Optimization Patch Start */
+        List<ItemStack> logsToDrop = new ArrayList<>();
+        boolean canUseCleanCuts = Permissions.canUseSubSkill(getPlayer(), SubSkillType.WOODCUTTING_CLEAN_CUTS);
+        boolean canUseHarvestLumber = Permissions.canUseSubSkill(getPlayer(), SubSkillType.WOODCUTTING_HARVEST_LUMBER);
+        /* TreeFeller Optimization Patch End */
 
         for (Block block : treeFellerBlocks) {
             int beforeXP = xp;
+            Collection<ItemStack> blockDrops = block.getDrops(itemStack);  // TreeFeller Optimization Patch
 
             if (!EventUtils.simulateBlockBreak(block, player, FakeBlockBreakEventType.TREE_FELLER)) {
                 continue;
@@ -335,11 +373,34 @@ public class WoodcuttingManager extends SkillManager {
                 xp += processTreeFellerXPGains(block, processedLogCount);
 
                 //Drop displaced block
-                spawnItemsFromCollection(player, getBlockCenter(block),
-                        block.getDrops(itemStack), ItemSpawnReason.TREE_FELLER_DISPLACED_BLOCK);
+                addLogsToList(logsToDrop, blockDrops);  // TreeFeller Optimization Patch
+                //spawnItemsFromCollection(player, getBlockCenter(block), // TreeFeller Optimization Patch
+                //       block.getDrops(itemStack), ItemSpawnReason.TREE_FELLER_DISPLACED_BLOCK); // TreeFeller Optimization Patch
 
                 //Bonus Drops / Harvest lumber checks
-                processBonusDropCheck(block);
+                /* TreeFeller Optimization Patch Start */
+                if (mcMMO.p.getGeneralConfig().getDoubleDropsEnabled(PrimarySkillType.WOODCUTTING, block.getType())) {
+                    //Mastery enabled for player
+                    if (canUseCleanCuts) {
+                        if (checkCleanCutsActivation(block.getType())) {
+                            //Triple drops
+                            addLogsToList(logsToDrop, blockDrops);
+                            addLogsToList(logsToDrop, blockDrops);
+                        } else {
+                            //Harvest Lumber Check
+                            if (checkHarvestLumberActivation(block.getType())) {
+                                addLogsToList(logsToDrop, blockDrops);
+                            }
+                        }
+                        //No Mastery (no Clean Cuts)
+                    } else if (canUseHarvestLumber) {
+                        if (checkHarvestLumberActivation(block.getType())) {
+                            addLogsToList(logsToDrop, blockDrops);
+                        }
+                    }
+                }
+                //processBonusDropCheck(blockState);
+                /* TreeFeller Optimization Patch End */
             } else if (BlockUtils.isNonWoodPartOfTree(block)) {
                 // 75% of the time do not drop leaf blocks
                 if (ThreadLocalRandom.current().nextInt(100) > 75) {
@@ -376,7 +437,11 @@ public class WoodcuttingManager extends SkillManager {
             //Update only when XP changes
             processedLogCount = updateProcessedLogCount(xp, processedLogCount, beforeXP);
         }
-
+        /* TreeFeller Optimization Patch Start */
+        for (ItemStack item:logsToDrop) {
+            getPlayer().getWorld().dropItemNaturally(player.getLocation(), item);
+        }
+        /* TreeFeller Optimization Patch End */
         applyXpGain(xp, XPGainReason.PVE, XPGainSource.SELF);
     }
 
